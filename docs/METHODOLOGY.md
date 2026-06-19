@@ -1,12 +1,13 @@
 # Methodology
 
 How the agent turns "find bugs" into reviewable, proven PRs. These are the
-mechanics that make it reliable.
+mechanics that make it reliable. Commands are shown with **Playwright**; adapt
+them to whatever UI e2e runner the target repo uses (any runner that can record
+video works).
 
 ## 1. One spec produces both GIFs (TDD, RED → GREEN)
 
-Write a single Playwright spec that **asserts the fixed behavior**, then run it
-twice:
+Write a single e2e spec that **asserts the fixed behavior**, then run it twice:
 
 - against the **buggy** build → it **fails**, and the recording shows the bug
   (this is `before.gif`),
@@ -18,15 +19,15 @@ To capture both on one machine, stash the fix between runs:
 ```bash
 # record BEFORE (buggy): revert just the fix, run, copy the video, restore
 git stash push -- <fix-file>
-E2E_BASE_URL=http://localhost:3000 npx playwright test e2e/<bug>.spec.ts   # fails
-cp test-results/**/video.webm /tmp/before.webm
+<e2e command> <spec>          # fails — records the bug
+cp <video-output>.webm /tmp/before.webm
 git stash pop
 # record AFTER (fixed): run again
-E2E_BASE_URL=http://localhost:3000 npx playwright test e2e/<bug>.spec.ts   # passes
-cp test-results/**/video.webm /tmp/after.webm
+<e2e command> <spec>          # passes — records the fix
+cp <video-output>.webm /tmp/after.webm
 ```
 
-Enable video with a **temporary** Playwright config change (do NOT commit it):
+Enable video recording **temporarily** (do NOT commit it). For Playwright:
 
 ```ts
 use: { baseURL: process.env.E2E_BASE_URL, video: "on", viewport: { width: 1280, height: 800 } }
@@ -44,7 +45,7 @@ ffmpeg -y -i in.webm -i /tmp/pal.png \
 ## 2. Inline GIFs in the PR — even for a private repo
 
 Do **not** rely on `raw.githubusercontent.com` (GitHub camo-proxies it and it
-breaks for private repos) and do **not** use links.
+breaks for private repos), and do **not** use links.
 
 Instead: **commit** the GIFs (e.g. `docs/qa-evidence/<bug>-before.gif`), then in
 the PR body reference them with the first-party `?raw=true` blob URL:
@@ -73,21 +74,28 @@ the browser.
 
 ## 3. Reliable e2e: prefer deterministic surfaces
 
-Build regression specs around forms, inputs, toggles, scenario tabs, and
-navigation — they're synchronous and reproducible. LLM-driven chat turns are slow
-(~30s each) and nondeterministic; only encode them in e2e when the bug lives
-there, and give them long timeouts.
+Build regression specs around forms, inputs, toggles, tabs, and navigation —
+they're synchronous and reproducible. Async- or AI-driven UI (e.g. streaming
+chat) is slow and nondeterministic; only encode it in e2e when the bug genuinely
+lives there, and give it long timeouts.
 
-Read 1–2 existing specs in `e2e/` first and match their conventions (fresh
-signup, selectors, helpers).
+Read 1–2 existing specs first and match their conventions (fresh fixture/login,
+selectors, helpers).
 
-## 4. Parallelize across worktrees
+## 4. Parallelize across worktrees (the per-worktree environment requirement)
 
-Spawn subagents, each in its **own git worktree / Conductor workspace**. Each
-workspace runs the Conductor setup scripts to bring up an **isolated copy of the
-site** — its own dev-server port, cloned DB, and per-workspace auth stack — so
-agents exploring and fixing different bugs never collide. One bug → one worktree
-→ one branch → one PR.
+Spawn subagents, each in its **own git worktree**. Each worktree runs the repo's
+**per-worktree environment setup** to bring up an **isolated copy of the app** —
+its own dev-server port, isolated DB/state, and isolated auth — so agents
+exploring and fixing different bugs never collide.
+
+- With [Conductor](https://conductor.build): each workspace provisions its own
+  stack automatically.
+- Without it: `git worktree add ../wt-<bug>` + the repo's setup script that
+  parameterizes the port and data directory per worktree.
+
+One bug → one worktree → one branch → one PR. If the repo can't isolate
+environments per worktree, run single-threaded instead.
 
 ## 5. PR hygiene
 

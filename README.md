@@ -1,61 +1,53 @@
 # press-bot
 
-An autonomous QA bug-hunt harness for a running web app.
+An autonomous QA bug-hunt harness for **any web-app repo**.
 
-You point a coding agent at the app; it walks the **entire user flow like a real
-person** — sign up, log in, link a bank (or not), answer the advisor's questions,
-change assumptions — and hunts for bugs. For every bug it finds it:
+Point a coding agent at your app; it walks the **entire user flow like a real
+person**, hunts for bugs, and for every bug it finds it:
 
 1. **records a GIF of the bug happening**,
 2. **fixes it**,
-3. **proves the fix with a UI end-to-end test** (the e2e harness is already set up),
+3. **proves the fix with a UI end-to-end test**,
 4. **records a GIF of that e2e test passing**, and
 5. **opens a PR for the bug with the before + after GIFs embedded inline**, so a
    non-technical reviewer can watch the bug, then watch it disappear — without
    reading a line of code.
 
-Built for the **home-buyer** app — point the agent at a running copy of it.
+## Requirement: per-worktree environments
+
+press-bot parallelizes by running subagents in **separate git worktrees**, each
+with its **own isolated, running copy of the app**. So the one thing your repo
+must provide is a way to **stand up an isolated environment per worktree** — a
+command that boots the app on a unique port with isolated data / state / auth, so
+parallel agents never collide.
+
+[Conductor](https://conductor.build) provides this out of the box (per-workspace
+provisioning); a plain `git worktree` plus your own setup script works too. If a
+repo can't isolate environments per worktree, run press-bot single-threaded.
+
+## Point it at your repo
+
+Tell the agent three things (or bake them into the prompt):
+
+1. **Env setup** — the command that brings up an isolated instance for a worktree.
+2. **App URL** — how to reach the running app (e.g. `http://localhost:$PORT`).
+3. **E2E** — the command that runs the UI e2e suite (Playwright, Cypress, …), and
+   the fact that it can record video (needed to produce the GIFs).
 
 ## The debug step
 
-The exact prompt to hand the agent lives in [`PROMPT.md`](PROMPT.md). It's also
-wired up as a Claude Code slash command: [`/bug-hunt`](.claude/commands/bug-hunt.md).
+[`PROMPT.md`](PROMPT.md) is the exact prompt to hand the agent. It's also wired up
+as a Claude Code slash command: [`/bug-hunt`](.claude/commands/bug-hunt.md).
 
-The short version:
+## How it works
 
-> Go through the full flow (signup, login, link with Plaid or not, answer
-> questions, change assumptions, etc.) and find bugs. For each bug: record a GIF
-> of it, fix it, reproduce the fix not-happening in a UI e2e test, record that
-> e2e run as a GIF, and open a PR with the before + after GIFs inline so
-> non-technical people can review.
+The mechanics that make the GIFs reproducible and the e2e reliable are in
+[`docs/METHODOLOGY.md`](docs/METHODOLOGY.md):
 
-## Parallelize it
-
-Spawn subagents in **separate git worktrees / Conductor workspaces** to explore
-and fix in parallel. Each workspace brings up its **own copy of the site** by
-running the Conductor setup scripts (its own port, DB, and auth stack), so
-agents never step on each other. One bug → one worktree → one PR.
-
-## Quick start
-
-```bash
-# 1. bring up a copy of the home-buyer app (per worktree/workspace)
-./provision-workspace.sh   # Conductor setup → unique port/DB/auth
-npm run dev
-
-# 2. hand the agent the debug step
-#    paste PROMPT.md (or run /bug-hunt in Claude Code)
-```
-
-## How it actually works
-
-The mechanics that make the GIFs reproducible and the e2e reliable are written
-up in [`docs/METHODOLOGY.md`](docs/METHODOLOGY.md):
-
-- one Playwright spec produces **both** GIFs — before (run against the buggy
-  build, fails) and after (run against the fix, passes),
+- one e2e spec produces **both** GIFs — before (run against the buggy build,
+  fails) and after (run against the fix, passes),
 - GIFs embed **inline in the PR body even for private repos**, via committed
   `?raw=true` image URLs,
 - favor **deterministic UI surfaces** for stable e2e (forms, inputs, toggles)
-  over LLM-driven chat,
-- **one bug per PR**, parallelized across worktrees.
+  over async/AI-driven UI,
+- **one bug per worktree → one PR**.
