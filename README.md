@@ -1,4 +1,4 @@
-# protistai
+# gifhub
 
 An autonomous QA bug-hunt harness for **any web-app repo**.
 
@@ -15,7 +15,7 @@ person**, hunts for bugs, and for every bug it finds it:
 
 ## Requirement: per-worktree environments
 
-protistai parallelizes by running subagents in **separate git worktrees**, each
+gifhub parallelizes by running subagents in **separate git worktrees**, each
 with its **own isolated, running copy of the app**. So the one thing your repo
 must provide is a way to **stand up an isolated environment per worktree** — a
 command that boots the app on a unique port with isolated data / state / auth, so
@@ -23,7 +23,7 @@ parallel agents never collide.
 
 [Conductor](https://conductor.build) provides this out of the box (per-workspace
 provisioning); a plain `git worktree` plus your own setup script works too. If a
-repo can't isolate environments per worktree, run protistai single-threaded.
+repo can't isolate environments per worktree, run gifhub single-threaded.
 
 ## Point it at your repo
 
