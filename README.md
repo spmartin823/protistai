@@ -23,11 +23,13 @@ repo:
 /plugin install gifhub
 ```
 
-That installs two skills — [`bug-hunt`](skills/bug-hunt/SKILL.md) (find + fix +
-GIF PRs) and [`prod-bug-report`](skills/prod-bug-report/SKILL.md) (report-only) —
-plus the [`/bug-hunt`](commands/bug-hunt.md) slash command. The skills
-auto-trigger when you ask an agent to hunt for bugs. Run `/plugin update gifhub`
-to pull changes. To try it without installing, from a clone:
+That installs three skills — [`bug-hunt`](skills/bug-hunt/SKILL.md) (find + fix +
+GIF PRs), [`prod-bug-report`](skills/prod-bug-report/SKILL.md) (report-only), and
+[`get-or-create-per-worktree-dev-env`](skills/get-or-create-per-worktree-dev-env/SKILL.md)
+(the isolation helper `bug-hunt` leans on) — plus the
+[`/bug-hunt`](commands/bug-hunt.md) slash command. The skills auto-trigger when
+you ask an agent to hunt for bugs. Run `/plugin update gifhub` to pull changes. To
+try it without installing, from a clone:
 
 ```
 claude --plugin-dir /path/to/gifhub
@@ -37,21 +39,29 @@ claude --plugin-dir /path/to/gifhub
 
 gifhub parallelizes by running subagents in **separate git worktrees**, each
 with its **own isolated, running copy of the app**. So the one thing your repo
-must provide is a way to **stand up an isolated environment per worktree** — a
-command that boots the app on a unique port with isolated data / state / auth, so
-parallel agents never collide.
+needs is a way to **stand up an isolated environment per worktree** — a command
+that boots the app on a unique port with isolated data / state / auth, so parallel
+agents never collide.
 
-[Conductor](https://conductor.build) provides this out of the box (per-workspace
-provisioning); a plain `git worktree` plus your own setup script works too. If a
-repo can't isolate environments per worktree, run gifhub single-threaded.
+You don't have to build this by hand. The
+[`get-or-create-per-worktree-dev-env`](skills/get-or-create-per-worktree-dev-env/SKILL.md)
+skill **gets it if your repo already has it, or creates it if it doesn't** —
+checking for a [Conductor](https://conductor.build) setup first (per-workspace
+provisioning out of the box), and otherwise writing a `gifhub.toml` in Conductor's
+schema plus a `scripts/worktree-env.sh` runner. It then **proves** the isolation
+(two worktrees side by side: distinct ports, isolated data, isolated auth) before
+declaring success. `bug-hunt` invokes it automatically before fanning out, and a
+hook blocks the fan-out until isolation is verified. If a repo genuinely can't
+isolate per worktree, gifhub runs single-threaded.
 
 ## Point it at your repo
 
-Tell the agent three things (or bake them into the prompt):
+Tell the agent (or bake into the prompt):
 
-1. **Env setup** — the command that brings up an isolated instance for a worktree.
-2. **App URL** — how to reach the running app (e.g. `http://localhost:$PORT`).
-3. **E2E** — the command that runs the UI e2e suite (Playwright, Cypress, …), and
+1. **Env setup + App URL** — usually nothing to do: `get-or-create-per-worktree-dev-env`
+   gets-or-creates the isolated per-worktree env and returns the boot command +
+   URL. Point it at an existing setup command if you already have one.
+2. **E2E** — the command that runs the UI e2e suite (Playwright, Cypress, …), and
    the fact that it can record video (needed to produce the GIFs).
 
 ## The debug step

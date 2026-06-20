@@ -15,8 +15,13 @@ should be in the PR for the bug so that non-technical people can review the bug
 and see that it's fixed.
 
 You can use subagents in different git worktrees to parallelize your exploration
-+ fixes. Each worktree brings up its own isolated copy of the app by running the
-repo's per-worktree environment setup.
++ fixes. Each worktree must bring up its **own isolated copy of the app** — its
+own port, data/state, and auth — so parallel agents never collide. Get the repo's
+per-worktree env setup if it has one; if it doesn't, create one (prefer
+[Conductor](https://conductor.build)'s schema — a `gifhub.toml` with `[scripts]`
+`setup`/`run` on a unique port and `run_mode = "concurrent"`) and **prove the
+isolation with two worktrees side by side before relying on it**. If the repo
+can't isolate per worktree, run single-threaded.
 
 ---
 

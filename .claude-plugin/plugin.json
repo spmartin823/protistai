@@ -7,5 +7,6 @@
     "url": "https://github.com/press-pass"
   },
   "homepage": "https://github.com/press-pass/gifhub",
-  "repository": "https://github.com/press-pass/gifhub"
+  "repository": "https://github.com/press-pass/gifhub",
+  "hooks": "./hooks/hooks.json"
 }

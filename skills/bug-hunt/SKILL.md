@@ -14,20 +14,40 @@ already set up). Then record the UI of that e2e test as a GIF. The before and
 after GIFs must be embedded **inline** in the PR for the bug, so non-technical
 people can review the bug and see that it's fixed.
 
-## Before you start — determine three things for this repo
+## Before you start — determine two things for this repo
 
-1. **Env setup** — the command that brings up an isolated instance for a worktree.
-2. **App URL** — how to reach the running app (e.g. `http://localhost:$PORT`).
-3. **E2E** — the command that runs the UI e2e suite (Playwright, Cypress, …),
+1. **Env setup + App URL** — how to bring up an isolated instance for a worktree
+   and reach it. Don't hand-roll this: invoke the
+   `get-or-create-per-worktree-dev-env` skill, which gets or creates it and hands
+   back the boot command + URL pattern (see *Parallelize across worktrees* below).
+2. **E2E** — the command that runs the UI e2e suite (Playwright, Cypress, …),
    which must be able to record video (needed to produce the GIFs).
 
 ## Parallelize across worktrees
 
 Use subagents in different git worktrees to parallelize exploration and fixes.
-Each worktree brings up its own isolated copy of the app by running the repo's
-per-worktree environment setup (its own port, DB/state, and auth) so parallel
-agents never collide. If the repo can't isolate environments per worktree, run
-single-threaded.
+Each worktree brings up its own isolated copy of the app (its own port, DB/state,
+and auth) so parallel agents never collide.
+
+**Before you dispatch any subagent, guarantee that isolation exists.** Run this
+once, from the repo root, then invoke the `get-or-create-per-worktree-dev-env`
+skill:
+
+```bash
+# scope + freshen the per-worktree-env gate for this bug hunt
+# (same state-dir derivation the skill and the enforcement hook use)
+PROJ="${CLAUDE_PROJECT_DIR:-$PWD}"
+ROOT="$(cd "$PROJ" 2>/dev/null && git rev-parse --show-toplevel 2>/dev/null)" || ROOT="$PROJ"
+STATE="${TMPDIR:-/tmp}/gifhub/$(printf '%s' "$ROOT" | cksum | cut -d' ' -f1)"
+mkdir -p "$STATE"; rm -f "$STATE/per-worktree-env.json"; touch "$STATE/bug-hunt-active"
+```
+
+Then **invoke `get-or-create-per-worktree-dev-env`**. It returns a contract (the
+isolated-boot command + URL pattern) — give that command to each subagent so it
+brings up its own instance. A `PreToolUse` hook enforces this: subagent dispatch
+is blocked until that skill has verified isolation. If the repo genuinely can't
+isolate per worktree, the skill says so — then run **single-threaded** (don't
+dispatch subagents).
 
 ## Definition of done (per bug)
 

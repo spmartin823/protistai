@@ -1,0 +1,14 @@
+{
+  "PreToolUse": [
+    {
+      "matcher": "Task|Agent",
+      "hooks": [
+        {
+          "type": "command",
+          "command": "bash ${CLAUDE_PLUGIN_ROOT}/hooks/require-per-worktree-env.sh",
+          "timeout": 10
+        }
+      ]
+    }
+  ]
+}
