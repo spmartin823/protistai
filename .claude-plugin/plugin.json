@@ -1,12 +1,11 @@
 {
   "name": "gifhub",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Autonomous QA bug-hunt harness: walk a web app's full user flow, find bugs, fix them, and ship each as a PR with inline before/after GIFs. Includes a report-only mode for production.",
   "author": {
     "name": "Seamus Martin",
     "url": "https://github.com/press-pass"
   },
   "homepage": "https://github.com/press-pass/gifhub",
-  "repository": "https://github.com/press-pass/gifhub",
-  "hooks": "./hooks/hooks.json"
+  "repository": "https://github.com/press-pass/gifhub"
 }
