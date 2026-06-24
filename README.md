@@ -13,6 +13,13 @@ person**, hunts for bugs, and for every bug it finds it:
    non-technical reviewer can watch the bug, then watch it disappear — without
    reading a line of code.
 
+## Demo
+
+A bug-hunt PR a reviewer can read top to bottom — the bug it found, the
+before/after GIFs playing inline, and the root cause — without opening the diff:
+
+![gifhub bug-hunt demo: a PR showing what the user sees, before/after GIFs, and the root cause](assets/bug-hunt-demo.gif)
+
 ## Install as a Claude Code plugin
 
 gifhub ships as a Claude Code plugin, so you can drop these skills into **any**
